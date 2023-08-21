@@ -89,6 +89,7 @@ extern "C" {
 extern GoUintptr getEncoding(char* encoding);
 extern GoUintptr getEncodingForModel(char* model);
 extern struct ArrayAndSize encode(GoUintptr ptr, char* text);
+extern char* decode(GoUintptr ptr, int* tokenArr, int size);
 
 #ifdef __cplusplus
 }

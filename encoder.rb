@@ -38,16 +38,18 @@ module Encoder
       tokens_and_size = Encoder.encode(pointer, text)
 
       # Access the array pointer and size from the struct
-      array = tokens_and_size[:array].read_array_of_int(tokens_and_size[:size])
+      tokens = tokens_and_size[:array].read_array_of_int(tokens_and_size[:size])
       size = tokens_and_size[:size]
+
+
       # Print the array elements
-      puts "Tokens: #{array.join(', ')}"
+      puts "Tokens: #{tokens.join(', ')}"
       puts "Size: #{size}"
 
       p "free the allocated memory"
     #   Example.free(c_ptr)
     #   Example.free(tokens_and_size[:array])
-
+      tokens
     rescue => e
         puts "error: #{e}"
         # Example.free(c_ptr)
@@ -55,20 +57,34 @@ module Encoder
     end
   end
 
+  def self.decode_tokens(pointer:, tokens:)
+    # takes an array of tokens gets the length of the array and calls the decode function
+    # returns a string
+    # Allocate memory for the array in Go
+    size = tokens.size
+    c_array = FFI::MemoryPointer.new(:int, size)
+    c_array.write_array_of_int(tokens)
+    Encoder.decode(pointer, c_array, size)
+  end
+
   private
 
   attach_function :getEncoding, [:string ], :pointer
   attach_function :getEncodingForModel, [:string], :pointer
   attach_function :encode , [:pointer, :string], ArrayAndSize.by_value
+  attach_function :decode, [:pointer, :pointer, :int], :string
 end
 
 
-
-# Call the function
+# Example calls
 c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
 Encoder.encode_string(pointer: c_ptr, text: "Smoked cheese is the best of cheese")
 
 m_ptr = Encoder.get_encoding_for_model(model: "gpt-3.5-turbo")
 
-Encoder.encode_string(pointer: m_ptr, text: "Big cats like big boxes")
+tokens = Encoder.encode_string(pointer: m_ptr, text: "Big cats like big boxes")
+
+value = Encoder.decode_tokens(pointer: m_ptr, tokens: tokens)
+
+p "decoded value: #{value}"

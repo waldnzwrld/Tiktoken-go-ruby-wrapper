@@ -87,15 +87,23 @@ func encode(ptr uintptr, text *C.char) C.struct_ArrayAndSize {
 }
 
 //export decode
-// func decode(ptr uintptr, tokens *C.int) *C.char {
-// 	pointer := *(*tiktoken.Tiktoken)(unsafe.Pointer(ptr))
-// 	fmt.Printf("pointer: %v\n", pointer)
-// 	// get the referenced struct
-// 	encoder := &pointer
-// 	fmt.Printf("Tiktoken struct rereferenced: %v\n", encoder)
+func decode(ptr uintptr, tokenArr *C.int, size C.int) *C.char {
+	tokens := make([]int, size)
+	for i := 0; i < int(size); i++ {
+		tokens[i] = int(*(*C.int)(unsafe.Pointer(uintptr(unsafe.Pointer(tokenArr)) + uintptr(i)*unsafe.Sizeof(*tokenArr))))
+	}
 
-// 	text :=encoder.Decode(tokens)
+	pointer := *(*tiktoken.Tiktoken)(unsafe.Pointer(ptr))
+	fmt.Printf("pointer: %v\n", pointer)
+	// get the referenced struct
+	encoder := &pointer
+	fmt.Printf("Tiktoken struct rereferenced: %v\n", encoder)
 
-// }
+	text := encoder.Decode(tokens)
+	fmt.Printf("decoded text: %v\n", text)
+
+	return C.CString(text)
+
+}
 
 func main() {}
