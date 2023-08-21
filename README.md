@@ -1,2 +1,2 @@
 # Tiktoken-go-ruby-wrapper
-A RUby gem wrapper around the tiktoken-go pacakge
+A Ruby gem wrapper around the tiktoken-go pacakge
