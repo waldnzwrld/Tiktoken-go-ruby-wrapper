@@ -8,13 +8,21 @@ module Encoder
            :size, :size_t
   end
 
-  attach_function :getEncoding, [:string ], :pointer
-  attach_function :getEncodingForModel, [:string], :pointer
-  attach_function :encode , [:pointer, :string], ArrayAndSize.by_value
-
   def self.get_encoding(encoding:)
     p "get encoding for #{encoding}"
     ptr = Encoder.getEncoding(encoding)
+    # Convert the uintptr to a C pointer
+    if ptr.null?
+        puts "ptr is null"
+    else
+        p "ptr is not null"
+        FFI::Pointer.new(ptr)
+    end
+  end
+
+  def self.get_encoding_for_model(model:)
+    p "get encoding for #{model}"
+    ptr = Encoder.getEncodingForModel(model)
     # Convert the uintptr to a C pointer
     if ptr.null?
         puts "ptr is null"
@@ -46,6 +54,12 @@ module Encoder
         # Example.free(tokens_and_size[:array]) if tokens_and_size
     end
   end
+
+  private
+
+  attach_function :getEncoding, [:string ], :pointer
+  attach_function :getEncodingForModel, [:string], :pointer
+  attach_function :encode , [:pointer, :string], ArrayAndSize.by_value
 end
 
 
@@ -55,6 +69,6 @@ c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
 Encoder.encode_string(pointer: c_ptr, text: "Smoked cheese is the best of cheese")
 
-m_ptr = Encoder.getEncodingForModel("gpt-3.5-turbo")
+m_ptr = Encoder.get_encoding_for_model(model: "gpt-3.5-turbo")
 
 Encoder.encode_string(pointer: m_ptr, text: "Big cats like big boxes")
