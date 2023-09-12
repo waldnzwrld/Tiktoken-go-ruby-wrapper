@@ -21,9 +21,10 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 #line 3 "tiktoken_wrapper.go"
 
-// void f(void* ptr) {}
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
 struct ArrayAndSize{
     int* Array;
     size_t Size;
@@ -90,6 +91,7 @@ extern GoUintptr getEncoding(char* encoding);
 extern GoUintptr getEncodingForModel(char* model);
 extern struct ArrayAndSize encode(GoUintptr ptr, char* text);
 extern char* decode(GoUintptr ptr, int* tokenArr, int size);
+extern void freeBpe(GoUintptr ptr);
 
 #ifdef __cplusplus
 }
