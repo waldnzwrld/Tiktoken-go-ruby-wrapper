@@ -5,8 +5,9 @@ module Encoder
   extend FFI::Library
   ffi_lib File.expand_path("./libttwrapper.so", File.dirname(__FILE__))
 
+  four_h_string = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
-  MAX_SIZE = 4000
+  FOUR_K_STRING = four_h_string * 10
 
   def self.get_encoding(encoding:)
     ptr = Encoder.getEncoding(encoding)
@@ -67,25 +68,25 @@ end
   attach_function :fullRun, [:string, :string], :void
 end
 
-MemoryProfiler.start
 
-test_string = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+# uncommenting this will run 1000 the full flow in GO with 1000 iterations of encode
+# Encoder.profile(encoding_type: "cl100k_base", text: Encoder::FOUR_K_STRING)
 
-# make a string that is test string repeated 10 times
-four_thou_string = test_string * 10
+# Uncomment this line to profile the memory of the functions exposed from tiktoken.go
+# MemoryProfiler.start
+
 n = FFI::MemoryPointer.new(:long)
-# Encoder.profile(encoding_type: "cl100k_base", text: four_thou_string)
+
 c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
-# benchmark the next function over 1000 calls
-time = Benchmark.realtime do
-  50000.times do
-    Encoder.encode_string(pointer: c_ptr, text: four_thou_string, size: n)
-  end
-end
-
-puts "Total time taken for 50000 iterations: #{time} seconds"
-puts "Average time per iteration: #{time / 50000} seconds"
+# # benchmark the next function over 50000 calls
+# time = Benchmark.realtime do
+#   50000.times do
+#     Encoder.encode_string(pointer: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
+#   end
+# end
+# puts "Total time taken for 50000 iterations: #{time} seconds"
+# puts "Average time per iteration: #{time / 50000} seconds"
 
 
 tokens = Encoder.encode_string(pointer: c_ptr, text: "Big cats like big boxes", size: n)
@@ -97,5 +98,6 @@ p "decoded tokens #{value}"
 
 Encoder.freeBpe(c_ptr)
 
-report = MemoryProfiler.stop
-report.pretty_print
+# # If you uncommented the memory profiler above, uncomment this to print the report
+# report = MemoryProfiler.stop
+# report.pretty_print

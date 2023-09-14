@@ -24,11 +24,6 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 #include <stdlib.h>
 
-struct ArrayAndSize{
-    int* Array;
-    size_t Size;
-};
-
 
 #line 1 "cgo-generated-wrapper"
 

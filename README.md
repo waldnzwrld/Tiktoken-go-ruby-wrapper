@@ -9,4 +9,15 @@ The go functions are attached as private to allow for error handling on the Ruby
 
 A set of Ruby functions are exposed for those purposes.
 
-This is still very beta, and I would like to vet the memory implications involved with the amount of unsafe pointers in play and pointer conversion between C and Go
+# Profiling the approach
+## Go Profiling
+encoder.rb#L73 contains a call to a `fullRun` function in the cgo lib tiktoken_wrapper.go#L120.
+This runs all of the exposed tiktoken functions including a run of `encode` over 1000 executions.
+The output is written to a pprof file, which can be opened using `pprof -http=localhost:6600 mem.pprof`
+
+## Ruby Profiling
+encoder.rb#L76 and encoder.rb#L103-104 include MemoryProfiler calls that descirbe object allocation
+and overall memory usage. Uncomment those lines to generate a memory profile
+
+encoder.rb#L83-89 include a 50000 execution block of calls to Encode. Uncomment these lines to discern overall timing
+and avg timing per operation.

@@ -4,16 +4,10 @@ package main
 
 #include <stdlib.h>
 
-struct ArrayAndSize{
-    int* Array;
-    size_t Size;
-};
-
 */
 import "C"
 import (
 	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime/pprof"
@@ -71,7 +65,7 @@ func encode(ptr uintptr, text *C.char, numTokens *C.long) *C.int {
 	// get the referenced struct
 	encoder := &pointer
 	// encode
-	token := encoder.EncodeOrdinary(C.GoString(text))
+	token := encoder.Encode(C.GoString(text), nil, nil)
 	// return the token and size
 	size := len(token)
 	if numTokens != nil {
@@ -119,19 +113,21 @@ func freeBpe(ptr uintptr) {
 
 //export fullRun
 func fullRun(model *C.char, text *C.char, numTokens *C.long) {
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
 	tke := getEncoding(model)
+	// initialise an empty pointer for tokens to be stored in
+	var tokens *C.int
+
 	// encode text 1000 times
 	for i := 0; i < 1000; i++ {
-		encode(tke, text, numTokens)
+		tokens = encode(tke, text, numTokens)
 	}
-	tokens := encode(tke, text, numTokens)
+	tokens = encode(tke, text, numTokens)
 	size := *numTokens
 
 	decode(tke, uintptr(unsafe.Pointer(tokens)), size)
+	// This usually happens in Ruby when the GC runs
+	// Since tokens is a pointer referenced there
+	C.free(unsafe.Pointer(tokens))
 
 	freeBpe(tke)
 
