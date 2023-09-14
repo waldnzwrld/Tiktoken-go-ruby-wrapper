@@ -18,8 +18,6 @@ import (
 
 //export getEncoding
 func getEncoding(encoding *C.char) uintptr {
-
-	tiktoken.SetBpeLoader(tiktoken.NewDefaultBpeLoader())
 	tke, err := tiktoken.GetEncoding(C.GoString(encoding))
 	if err != nil {
 		fmt.Println(err)
