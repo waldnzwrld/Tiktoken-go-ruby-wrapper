@@ -23,8 +23,7 @@ typedef struct { const char *p; ptrdiff_t n; } _GoString_;
 
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
+
 struct ArrayAndSize{
     int* Array;
     size_t Size;
@@ -89,9 +88,10 @@ extern "C" {
 
 extern GoUintptr getEncoding(char* encoding);
 extern GoUintptr getEncodingForModel(char* model);
-extern struct ArrayAndSize encode(GoUintptr ptr, char* text);
-extern char* decode(GoUintptr ptr, int* tokenArr, int size);
+extern int* encode(GoUintptr ptr, char* text, long* numTokens);
+extern char* decode(GoUintptr ptr, GoUintptr tokenArr, long size);
 extern void freeBpe(GoUintptr ptr);
+extern void fullRun(char* model, char* text, long* numTokens);
 
 #ifdef __cplusplus
 }

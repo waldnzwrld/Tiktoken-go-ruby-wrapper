@@ -1,43 +1,24 @@
 require 'ffi'
 require 'benchmark'
+require 'memory_profiler'
 module Encoder
   extend FFI::Library
   ffi_lib File.expand_path("./libttwrapper.so", File.dirname(__FILE__))
 
-  class ArrayAndSize < FFI::Struct
-    layout :array, :pointer,
-           :size, :size_t
-  end
+
+  MAX_SIZE = 4000
 
   def self.get_encoding(encoding:)
     ptr = Encoder.getEncoding(encoding)
-    # Convert the uintptr to a C pointer
-    if ptr.null?
-        puts "ptr is null"
-    else
-        FFI::Pointer.new(ptr)
-    end
   end
 
   def self.get_encoding_for_model(model:)
     ptr = Encoder.getEncodingForModel(model)
-    # Convert the uintptr to a C pointer
-    if ptr.null?
-        puts "ptr is null"
-    else
-        FFI::Pointer.new(ptr)
-    end
   end
 
-  def self.encode_string(pointer:, text:)
+  def self.encode_string(pointer:, text:, size:)
     begin
-      tokens_and_size = Encoder.encode(pointer, text)
-
-      # Access the array pointer and size from the struct
-      tokens = tokens_and_size[:array].read_array_of_int(tokens_and_size[:size])
-      size = tokens_and_size[:size]
-
-      tokens
+      Encoder.encode(pointer, text, size)
     rescue => e
         puts "error: #{e}"
         # freeBpe on the pointer if the pointer is allocated
@@ -45,57 +26,76 @@ module Encoder
     end
   end
 
-  def self.decode_tokens(pointer:, tokens:)
+  def self.decode_tokens(pointer:, tokens:, size:)
     # takes an array of tokens gets the length of the array and calls the decode function
     # returns a string
     # Allocate memory for the array in Go
     begin
-      size = tokens.size
-      c_array = FFI::MemoryPointer.new(:int, size)
-      c_array.write_array_of_int(tokens)
-      text = Encoder.decode(pointer, c_array, size)
-
-      c_array.free
-      text
+      if tokens.is_a?(FFI::Pointer)
+        Encoder.decode(pointer, tokens, size)
+      elsif tokens.is_a?(Array)
+        tokens.size
+        tpointer = Encoder.convertTokensToPointer(tokens: tokens)
+        Encoder.decode(pointer, tpointer, size)
+      end
     rescue => e
         puts "error: #{e}"
         # freeBpe on the pointer if the pointer is allocated
         Encoder.freeBpe(pointer) if pointer
+    ensure
+      tpointer.free if tpointer.is_a?(FFI::Pointer)
     end
   end
+
+  def self.convertTokensToPointer(tokens:)
+    # takes an array of tokens and converts them into a C Array
+    size = tokens.size
+    return FFI::MemoryPointer.new(:int, size).write_array_of_int(tokens)
+  end
+
+def self.profile(encoding_type:, text:)
+  Encoder.fullRun(encoding_type, text)
+end
 
   private
 
   attach_function :getEncoding, [:string ], :pointer
   attach_function :getEncodingForModel, [:string], :pointer
-  attach_function :encode , [:pointer, :string], ArrayAndSize.by_value
+  attach_function :encode , [:pointer, :string, :pointer], :pointer
   attach_function :decode, [:pointer, :pointer, :int], :string
   attach_function :freeBpe, [:pointer], :void
+  attach_function :fullRun, [:string, :string], :void
 end
+
+MemoryProfiler.start
 
 test_string = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
 # make a string that is test string repeated 10 times
 four_thou_string = test_string * 10
-
+n = FFI::MemoryPointer.new(:long)
+# Encoder.profile(encoding_type: "cl100k_base", text: four_thou_string)
 c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
 # benchmark the next function over 1000 calls
 time = Benchmark.realtime do
-  1000.times do
-    Encoder.encode_string(pointer: c_ptr, text: four_thou_string)
+  50000.times do
+    Encoder.encode_string(pointer: c_ptr, text: four_thou_string, size: n)
   end
 end
 
-puts "Total time taken for 1000 iterations: #{time} seconds"
-puts "Average time per iteration: #{time / 1000} seconds"
+puts "Total time taken for 50000 iterations: #{time} seconds"
+puts "Average time per iteration: #{time / 50000} seconds"
+
+
+tokens = Encoder.encode_string(pointer: c_ptr, text: "Big cats like big boxes", size: n)
+p "size #{n.read_long}"
+p "tokens #{tokens.read_array_of_int(n.read_long)}"
+
+value = Encoder.decode_tokens(pointer: c_ptr, tokens: tokens, size: n.read_long)
+p "decoded tokens #{value}"
 
 Encoder.freeBpe(c_ptr)
 
-m_ptr = Encoder.get_encoding_for_model(model: "gpt-3.5-turbo")
-
-tokens = Encoder.encode_string(pointer: m_ptr, text: "Big cats like big boxes")
-
-value = Encoder.decode_tokens(pointer: m_ptr, tokens: tokens)
-
-Encoder.freeBpe(m_ptr)
+report = MemoryProfiler.stop
+report.pretty_print
