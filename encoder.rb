@@ -11,38 +11,48 @@ module Encoder
 
   def self.get_encoding(encoding:)
     ptr = Encoder.getEncoding(encoding)
+    # if ptr references 0 raise an error the encoding failed
+    if ptr == FFI::Pointer::NULL
+      raise "Encoding failed"
+    end
+    ptr
   end
 
   def self.get_encoding_for_model(model:)
     ptr = Encoder.getEncodingForModel(model)
+    # if ptr references 0 raise an error the encoding failed
+    if ptr == FFI::Pointer::NULL
+      raise "Encoding failed"
+    end
+    ptr
   end
 
-  def self.encode_string(pointer:, text:, size:)
+  def self.encode_string(encoder:, text:, size:)
     begin
-      Encoder.encode(pointer, text, size)
+      Encoder.encode(encoder, text, size)
     rescue => e
         puts "error: #{e}"
-        # freeBpe on the pointer if the pointer is allocated
-        Encoder.freeBpe(pointer) if pointer
+        # free_encoder on the encoder if the encoder is allocated
+        Encoder.free_encoder(encoder) if encoder
     end
   end
 
-  def self.decode_tokens(pointer:, tokens:, size:)
+  def self.decode_tokens(encoder:, tokens:, size:)
     # takes an array of tokens gets the length of the array and calls the decode function
     # returns a string
     # Allocate memory for the array in Go
     begin
       if tokens.is_a?(FFI::Pointer)
-        Encoder.decode(pointer, tokens, size)
+        Encoder.decode(encoder, tokens, size)
       elsif tokens.is_a?(Array)
         tokens.size
         tpointer = Encoder.convertTokensToPointer(tokens: tokens)
-        Encoder.decode(pointer, tpointer, size)
+        Encoder.decode(encoder, tpointer, size)
       end
     rescue => e
         puts "error: #{e}"
-        # freeBpe on the pointer if the pointer is allocated
-        Encoder.freeBpe(pointer) if pointer
+        # free_encoder on the pointer if the pointer is allocated
+        Encoder.free_encoder(encoder) if encoder
     ensure
       tpointer.free if tpointer.is_a?(FFI::Pointer)
     end
@@ -54,9 +64,14 @@ module Encoder
     return FFI::MemoryPointer.new(:int, size).write_array_of_int(tokens)
   end
 
-def self.profile(encoding_type:, text:)
-  Encoder.fullRun(encoding_type, text)
-end
+  def self.profile(encoding_type:, text:)
+    Encoder.fullRun(encoding_type, text)
+  end
+
+  def self.free_encoder(encoder:)
+    Encoder.freeBpe(encoder)
+    encoder = FFI::Pointer::NULL
+  end
 
   private
 
@@ -73,31 +88,38 @@ end
 # Encoder.profile(encoding_type: "cl100k_base", text: Encoder::FOUR_K_STRING)
 
 # Uncomment this line to profile the memory of the functions exposed from tiktoken.go
-# MemoryProfiler.start
+MemoryProfiler.start
 
 n = FFI::MemoryPointer.new(:long)
-
+# i = 0
+# while i <= 100 do
 c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
-# # benchmark the next function over 50000 calls
-# time = Benchmark.realtime do
-#   50000.times do
-#     Encoder.encode_string(pointer: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
-#   end
+
+# benchmark the next function over 50000 calls
+time = Benchmark.realtime do
+  50000.times do
+    Encoder.encode_string(encoder: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
+  end
+end
+puts "Total time taken for 50000 iterations: #{time} seconds"
+puts "Average time per iteration: #{time / 50000} seconds"
+#   p "#{i + 1} successful runs"
+  # Encoder.free_encoder(encoder: c_ptr)
+#   i += 1
 # end
-# puts "Total time taken for 50000 iterations: #{time} seconds"
-# puts "Average time per iteration: #{time / 50000} seconds"
 
+# c_ptr = Encoder.get_encoding_for_model(model: "gpt-4")
 
-tokens = Encoder.encode_string(pointer: c_ptr, text: "Big cats like big boxes", size: n)
+tokens = Encoder.encode_string(encoder: c_ptr, text: "Big cats like big boxes", size: n)
 p "size #{n.read_long}"
 p "tokens #{tokens.read_array_of_int(n.read_long)}"
 
-value = Encoder.decode_tokens(pointer: c_ptr, tokens: tokens, size: n.read_long)
+value = Encoder.decode_tokens(encoder: c_ptr, tokens: tokens, size: n.read_long)
 p "decoded tokens #{value}"
 
-Encoder.freeBpe(c_ptr)
+Encoder.free_encoder(encoder: c_ptr)
 
-# # If you uncommented the memory profiler above, uncomment this to print the report
-# report = MemoryProfiler.stop
-# report.pretty_print
+# If you uncommented the memory profiler above, uncomment this to print the report
+report = MemoryProfiler.stop
+report.pretty_print

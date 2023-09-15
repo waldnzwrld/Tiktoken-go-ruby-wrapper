@@ -8,13 +8,21 @@ package main
 import "C"
 import (
 	"fmt"
-	_ "net/http/pprof"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"unsafe"
 
 	"github.com/pkoukk/tiktoken-go"
 )
+
+// set a global map to store references to the tiktoken structs
+// so that they don't get garbage collected
+// this works because the script is loaded by FFI::Library
+// and stored in memory
+// GC is run for the entire process once the ruby module
+// is no longer in use
+var tiktokenMap = make(map[uintptr]*tiktoken.Tiktoken)
 
 //export getEncoding
 func getEncoding(encoding *C.char) uintptr {
@@ -24,111 +32,157 @@ func getEncoding(encoding *C.char) uintptr {
 		return uintptr(0)
 	}
 
+	// since we cannot directly convert a go pointer to a C pointer
+	// we need to convert it to an unsafe pointer first
 	ptr := unsafe.Pointer(tke)
 
+	// if the pointer is nil, return a pointer to 0
 	if ptr == nil {
 		return uintptr(0)
 	}
 
+	// this stores a reference to the tiktoken struct
+	// so that it doesn't get garbage collected
 	tiktokenMap[uintptr(ptr)] = tke
 
+	// return the pointer as a uintptr which is read as an FFI::Pointer
 	return uintptr(ptr)
-
 }
 
 //export getEncodingForModel
 func getEncodingForModel(model *C.char) uintptr {
-	// tiktoken.SetBpeLoader(tiktoken.NewDefaultBpeLoader())
 	tke, err := tiktoken.EncodingForModel(C.GoString(model))
 	if err != nil {
 		fmt.Println(err)
 		return uintptr(0)
 	}
 
+	// since we cannot directly convert a go pointer to a C pointer
+	// we need to convert it to an unsafe pointer first
 	ptr := unsafe.Pointer(tke)
 
+	// if the pointer is nil, return a pointer to 0
 	if ptr == nil {
 		return uintptr(0)
 	}
 
+	// this stores a reference to the tiktoken struct
+	// so that it doesn't get garbage collected
 	tiktokenMap[uintptr(ptr)] = tke
 
+	// return the pointer as a uintptr which is read as an FFI::Pointer
 	return uintptr(ptr)
 }
 
 //export encode
 func encode(ptr uintptr, text *C.char, numTokens *C.long) *C.int {
-	// convert unsafe.Pointer to *tiktoken.Tiktoken
-	pointer := *(*tiktoken.Tiktoken)(unsafe.Pointer(ptr))
+	// numTokens is an empty FFI::MemoryPointer
+	// which will be used to store the number of tokens
+
+	// get the referenced pointer
+	// from the inmemory map
+	// to the *tiktoken.Tiktoken encoder struct
+	pointer := *tiktokenMap[ptr]
 	// get the referenced struct
 	encoder := &pointer
 	// encode
 	token := encoder.Encode(C.GoString(text), nil, nil)
-	// return the token and size
+
 	size := len(token)
 	if numTokens != nil {
+		// set the FFI::MemoryPointer value to size
 		*numTokens = C.long(size)
 	}
 
+	// Allocate a C array of the correct size
 	cArray := C.malloc(C.size_t(size) * C.sizeof_int)
 
 	// Copy the integers to the C array
 	for i, v := range token {
 		(*(*C.int)(unsafe.Pointer(uintptr(cArray) + uintptr(i)*C.sizeof_int))) = C.int(v)
 	}
+
+	// Return a pointer to the C array which will be read as an FFI::Pointer
 	return (*C.int)(cArray)
 }
 
 //export decode
-func decode(ptr uintptr, tokenArr uintptr, size C.long) *C.char {
+func decode(ptr uintptr, tokenArr *C.int, size C.long) *C.char {
+	// Here an FFI::Pointer tokenArr is passed in as a uintptr
+	// and then converted to a C array of ints
+	// This is probably the most difficult part of the code to read
+	// let's break it down
+	// in order to perform pointer arithmetic on the C array referenced by a *C.int
+	// we first need to convert it to an unsafe.Pointer then a uintptr
+	// then in order to get the offest bytes needed to access the correct element
+	// we multiply the index by the size of an int
+	// Finally we convert the resulting uintptr back to a *C.int through an unsafe.Pointer
+	// and dereference it to get the value
+	// This is done for each element in the array
+	// Long story short although this seems complex it is a necessary conversion.
+	// Since the unsafe.Pointers are used immediately GC is not an issue
+
 	tokens := make([]int, size)
 	for i := 0; i < int(size); i++ {
-		tokens[i] = int(*(*C.int)(unsafe.Pointer(tokenArr + uintptr(i)*C.sizeof_int)))
+		tokens[i] = int(*(*C.int)(unsafe.Pointer(uintptr(unsafe.Pointer(tokenArr)) + uintptr(i)*C.sizeof_int)))
 	}
 
-	pointer := *(*tiktoken.Tiktoken)(unsafe.Pointer(ptr))
+	// get the referenced pointer
+	// from the inmemory map
+	// to the *tiktoken.Tiktoken encoder struct
+	pointer := *tiktokenMap[ptr]
 	// get the referenced struct
 	encoder := &pointer
 
 	text := encoder.Decode(tokens)
-
+	// return a C string
 	return C.CString(text)
 }
 
-var tiktokenMap = make(map[uintptr]*tiktoken.Tiktoken)
-
 //export freeBpe
 func freeBpe(ptr uintptr) {
+	// This frees the reference to the tiktoken struct
+	// so that it can be garbage collected
 	_, ok := tiktokenMap[ptr]
 	if !ok {
-		fmt.Printf("Invalid pointer: %p\n", ptr)
+		runtime.GC()
 		return
 	}
-	// Free any resources associated with tke
 
+	// delete the reference to the tiktoken struct
 	delete(tiktokenMap, ptr)
+	runtime.GC()
 }
 
 //export fullRun
 func fullRun(model *C.char, text *C.char, numTokens *C.long) {
+	// get the encoding as a uintptr
 	tke := getEncoding(model)
 	// initialise an empty pointer for tokens to be stored in
 	var tokens *C.int
 
 	// encode text 1000 times
+	// passing the uintptr to the tiktoken struct
+	// and the text to be encoded
+	// as well as an empty FFI::MemoryPointer with C.long type
 	for i := 0; i < 1000; i++ {
 		tokens = encode(tke, text, numTokens)
 	}
 	tokens = encode(tke, text, numTokens)
+	// Read the long value from the numTokens pointer
 	size := *numTokens
 
-	decode(tke, uintptr(unsafe.Pointer(tokens)), size)
+	decode(tke, tokens, size)
 	// This usually happens in Ruby when the GC runs
 	// Since tokens is a pointer referenced there
 	C.free(unsafe.Pointer(tokens))
 
+	// free the tiktoken struct
 	freeBpe(tke)
 
+	// write the heap profile to a file
+	// this can be read with pprof
+	// pprof -web localhost:6000 mem.pprof
 	f, _ := os.Create("mem.pprof")
 	pprof.WriteHeapProfile(f)
 	f.Close()

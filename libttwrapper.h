@@ -84,7 +84,7 @@ extern "C" {
 extern GoUintptr getEncoding(char* encoding);
 extern GoUintptr getEncodingForModel(char* model);
 extern int* encode(GoUintptr ptr, char* text, long* numTokens);
-extern char* decode(GoUintptr ptr, GoUintptr tokenArr, long size);
+extern char* decode(GoUintptr ptr, int* tokenArr, long size);
 extern void freeBpe(GoUintptr ptr);
 extern void fullRun(char* model, char* text, long* numTokens);
 
