@@ -1,0 +1,15 @@
+# bin/bash
+
+# This script is used to setup dependencies for the gem
+
+# Ensure go is installed
+if ! [ -x "$(command -v go)" ]; then
+  echo 'Error: go is not installed.' >&2
+  exit 1
+fi
+
+# install go dependencies
+go mod download
+
+# Build C libraries from go file
+go build -buildmode=c-shared -o ../tiktoken-wrapper/ext/tiktoken-wrapper/libttwrapper.so ../tiktoken_wrapper.go

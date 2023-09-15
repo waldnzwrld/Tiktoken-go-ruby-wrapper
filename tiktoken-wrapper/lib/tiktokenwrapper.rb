@@ -1,7 +1,7 @@
 require 'ffi'
 require 'benchmark'
 require 'memory_profiler'
-module Encoder
+module TikTokenWrapper
   extend FFI::Library
   ffi_lib File.expand_path("./libttwrapper.so", File.dirname(__FILE__))
 
@@ -10,7 +10,7 @@ module Encoder
   FOUR_K_STRING = four_h_string * 10
 
   def self.get_encoding(encoding:)
-    ptr = Encoder.getEncoding(encoding)
+    ptr = self.getEncoding(encoding)
     # if ptr references 0 raise an error the encoding failed
     if ptr == FFI::Pointer::NULL
       raise "Encoding failed"
@@ -19,7 +19,7 @@ module Encoder
   end
 
   def self.get_encoding_for_model(model:)
-    ptr = Encoder.getEncodingForModel(model)
+    ptr = self.getEncodingForModel(model)
     # if ptr references 0 raise an error the encoding failed
     if ptr == FFI::Pointer::NULL
       raise "Encoding failed"
@@ -29,11 +29,11 @@ module Encoder
 
   def self.encode_string(encoder:, text:, size:)
     begin
-      Encoder.encode(encoder, text, size)
+      self.encode(encoder, text, size)
     rescue => e
         puts "error: #{e}"
         # free_encoder on the encoder if the encoder is allocated
-        Encoder.free_encoder(encoder) if encoder
+        self.free_encoder(encoder) if encoder
     end
   end
 
@@ -43,16 +43,16 @@ module Encoder
     # Allocate memory for the array in Go
     begin
       if tokens.is_a?(FFI::Pointer)
-        Encoder.decode(encoder, tokens, size)
+        self.decode(encoder, tokens, size)
       elsif tokens.is_a?(Array)
         tokens.size
-        tpointer = Encoder.convertTokensToPointer(tokens: tokens)
-        Encoder.decode(encoder, tpointer, size)
+        tpointer = self.convertTokensToPointer(tokens: tokens)
+        self.decode(encoder, tpointer, size)
       end
     rescue => e
         puts "error: #{e}"
         # free_encoder on the pointer if the pointer is allocated
-        Encoder.free_encoder(encoder) if encoder
+        self.free_encoder(encoder) if encoder
     ensure
       tpointer.free if tpointer.is_a?(FFI::Pointer)
     end
@@ -66,13 +66,13 @@ module Encoder
 
 
   def self.free_encoder(encoder:)
-    Encoder.freeBpe(encoder)
+    self.freeBpe(encoder)
     encoder = FFI::Pointer::NULL
   end
 
   def self.go_profile(encoding_type:, text:)
     n = FFI::MemoryPointer.new(:long)
-    Encoder.fullRun(encoding_type, text, n)
+    self.fullRun(encoding_type, text, n)
   end
 
   def self.benchmark()
@@ -109,16 +109,16 @@ module Encoder
 
   def self.example_run
     n = FFI::MemoryPointer.new(:long)
-    c_ptr = Encoder.get_encoding_for_model(model: "gpt-4")
+    c_ptr = self.get_encoding_for_model(model: "gpt-4")
 
-    tokens = Encoder.encode_string(encoder: c_ptr, text: "Big cats like big boxes", size: n)
+    tokens = self.encode_string(encoder: c_ptr, text: "Big cats like big boxes", size: n)
     p "size #{n.read_long}"
     p "tokens #{tokens.read_array_of_int(n.read_long)}"
 
-    value = Encoder.decode_tokens(encoder: c_ptr, tokens: tokens, size: n.read_long)
+    value = self.decode_tokens(encoder: c_ptr, tokens: tokens, size: n.read_long)
     p "decoded tokens #{value}"
 
-    Encoder.free_encoder(encoder: c_ptr)
+    self.free_encoder(encoder: c_ptr)
   end
 
   private
@@ -132,19 +132,19 @@ module Encoder
 end
 
 n = FFI::MemoryPointer.new(:long)
-c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
+c_ptr = TikTokenWrapper.get_encoding(encoding: "cl100k_base")
 
-Encoder.benchmark do
-  Encoder.encode_string(encoder: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
+TikTokenWrapper.benchmark do
+  TikTokenWrapper.encode_string(encoder: c_ptr, text: TikTokenWrapper::FOUR_K_STRING, size: n)
 end
 
-Encoder.ruby_profile do
+TikTokenWrapper.ruby_profile do
   50000.times do
-    Encoder.encode_string(encoder: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
+    TikTokenWrapper.encode_string(encoder: c_ptr, text: TikTokenWrapper::FOUR_K_STRING, size: n)
   end
-  Encoder.free_encoder(encoder: c_ptr)
+  TikTokenWrapper.free_encoder(encoder: c_ptr)
 end
 
-Encoder.go_profile(encoding_type: "cl100k_base", text: Encoder::FOUR_K_STRING)
+TikTokenWrapper.go_profile(encoding_type: "cl100k_base", text: TikTokenWrapper::FOUR_K_STRING)
 
-Encoder.example_run
+TikTokenWrapper.example_run
