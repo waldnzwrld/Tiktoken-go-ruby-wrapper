@@ -1,0 +1,6 @@
+# do not ignore .gemspec files
+!*.gemspec
+# ignore .gem files
+*.gem
+# ignore os x files
+.DS_Store

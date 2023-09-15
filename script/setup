@@ -10,8 +10,8 @@ fi
 
 # install go dependencies
 echo "Installing go dependencies...\n"
-go mod download
+go mod download go-deps/go.mod
 
 # Build C libraries from go file
 echo "Building C libraries...\n"
-go build -buildmode=c-shared -o tiktoken-wrapper/ext/tiktoken-wrapper/libttwrapper.so tiktoken_wrapper.go
+go build -buildmode=c-shared -o tiktoken-wrapper/ext/tiktoken-wrapper/libttwrapper.so go-deps/tiktoken_wrapper.go

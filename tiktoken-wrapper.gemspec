@@ -23,10 +23,11 @@ Gem::Specification.new do |spec|
 
     # Specify which files should be added to the gem when it is released.
     # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-    spec.files         = Dir.chdir(File.expand_path(__dir__)) do
-        `git ls-files -z`.split("\x0").reject do |f|
-            f.match(%r{^(test|spec|features)/})
-        end
+    # do not include go files scripts or gem files
+    # do not include go.mod or go.sum files
+    spec.files         = `git ls-files -z`.split("\x0").reject do |f|
+        f.match(%r{^(go|script|spec|test|exe|lib|ext)/}) ||
+        f.match(%r{^(go.mod|go.sum|tiktoken-wrapper.go)})
     end
     spec.bindir        = "exe" # if your gem is a command line app
     spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
@@ -35,6 +36,4 @@ Gem::Specification.new do |spec|
     spec.add_dependency "ffi"
     spec.add_dependency "benchmark"
     spec.add_dependency "memory_profiler"
-    # be sure that go is installed and included in the path during a build
-    spec.add_dependency "go"
 end
