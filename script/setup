@@ -9,7 +9,9 @@ if ! [ -x "$(command -v go)" ]; then
 fi
 
 # install go dependencies
+echo "Installing go dependencies...\n"
 go mod download
 
 # Build C libraries from go file
-go build -buildmode=c-shared -o ../tiktoken-wrapper/ext/tiktoken-wrapper/libttwrapper.so ../tiktoken_wrapper.go
+echo "Building C libraries...\n"
+go build -buildmode=c-shared -o tiktoken-wrapper/ext/tiktoken-wrapper/libttwrapper.so tiktoken_wrapper.go
