@@ -1,6 +1,10 @@
+# ignore any directory named tiktoken-wrapper-*
+tiktoken-wrapper-*
 # do not ignore .gemspec files
 !*.gemspec
 # ignore .gem files
 *.gem
+# ignore pprof files from anywhere in the hierarchy
+**/*.pprof
 # ignore os x files
 .DS_Store
