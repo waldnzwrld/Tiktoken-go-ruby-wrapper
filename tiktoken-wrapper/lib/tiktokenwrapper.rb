@@ -1,13 +1,8 @@
 require 'ffi'
-require 'benchmark'
-require 'memory_profiler'
+
 module TikTokenWrapper
   extend FFI::Library
   ffi_lib File.expand_path("../ext/tiktoken-wrapper/libttwrapper.so", File.dirname(__FILE__))
-
-  four_h_string = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-
-  FOUR_K_STRING = four_h_string * 10
 
   def self.get_encoding(encoding:)
     ptr = self.getEncoding(encoding)
@@ -70,43 +65,6 @@ module TikTokenWrapper
     encoder = FFI::Pointer::NULL
   end
 
-  def self.go_profile(encoding_type:, text:)
-    n = FFI::MemoryPointer.new(:long)
-    self.fullRun(encoding_type, text, n)
-  end
-
-  def self.benchmark()
-    # do not allow the block to be a call to go_profile
-    return unless block_given?
-    time = Benchmark.realtime do
-    50000.times do
-        yield
-      end
-    end
-    puts "Total time taken for 50000 iterations: #{time} seconds"
-    puts "Average time per iteration: #{time / 50000} seconds"
-  end
-
-  def self.ruby_profile()
-    # do not allow the block to be a call to go_profile
-    # this will cause a segfault
-    return unless block_given?
-    MemoryProfiler.start
-    yield
-    report = MemoryProfiler.stop
-    report.pretty_print
-  end
-
-  def self.test_over_time()
-    return unless block_given?
-    i = 0
-    while i < 100
-      yield
-      p "#{i + 1} successful runs"
-      i += 1
-    end
-  end
-
   def self.example_run
     n = FFI::MemoryPointer.new(:long)
     c_ptr = self.get_encoding_for_model(model: "gpt-4")
@@ -131,20 +89,4 @@ module TikTokenWrapper
   attach_function :fullRun, [:string, :string, :pointer], :void
 end
 
-n = FFI::MemoryPointer.new(:long)
-c_ptr = TikTokenWrapper.get_encoding(encoding: "cl100k_base")
-
-TikTokenWrapper.benchmark do
-  TikTokenWrapper.encode_string(encoder: c_ptr, text: TikTokenWrapper::FOUR_K_STRING, size: n)
-end
-
-TikTokenWrapper.ruby_profile do
-  50000.times do
-    TikTokenWrapper.encode_string(encoder: c_ptr, text: TikTokenWrapper::FOUR_K_STRING, size: n)
-  end
-  TikTokenWrapper.free_encoder(encoder: c_ptr)
-end
-
-TikTokenWrapper.go_profile(encoding_type: "cl100k_base", text: TikTokenWrapper::FOUR_K_STRING)
-
-TikTokenWrapper.example_run
+# TikTokenWrapper.example_run
