@@ -1,3 +1,9 @@
 # bin/bash
 
+# if pprof is not installed, install it
+if ! [ -x "$(command -v pprof)" ]; then
+  echo 'Installing pprof...\n'
+  go install github.com/google/pprof@latest
+fi
+
 ruby test/benchmark/benchmark.rb

@@ -39,9 +39,9 @@ class BenchmarkTests
         end
     end
 
-    def go_profile(encoding_type:, text:)
+    def go_profile(encoding_type:, text:, runs: 0)
         n = FFI::MemoryPointer.new(:long)
-        TikTokenWrapper.fullRun(encoding_type, text, n)
+        TikTokenWrapper.goProfile(encoding_type, text, n, runs)
     end
 end
 
@@ -61,4 +61,4 @@ benchmarker.ruby_profile do
   TikTokenWrapper.free_encoder(encoder: c_ptr)
 end
 
-benchmarker.go_profile(encoding_type: "cl100k_base", text: TikTokenWrapper::FOUR_K_STRING)
+benchmarker.go_profile(encoding_type: "cl100k_base", text: BenchmarkTests::FOUR_K_STRING)

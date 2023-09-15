@@ -154,20 +154,28 @@ func freeBpe(ptr uintptr) {
 	runtime.GC()
 }
 
-//export fullRun
-func fullRun(model *C.char, text *C.char, numTokens *C.long) {
+//export goProfile
+func goProfile(model *C.char, text *C.char, numTokens *C.long, runs C.int) {
 	// get the encoding as a uintptr
 	tke := getEncoding(model)
 	// initialise an empty pointer for tokens to be stored in
 	var tokens *C.int
 
-	// encode text 1000 times
+	// encode text runs number of times
 	// passing the uintptr to the tiktoken struct
 	// and the text to be encoded
 	// as well as an empty FFI::MemoryPointer with C.long type
-	for i := 0; i < 1000; i++ {
+	ops := int(runs)
+	if ops == 0 {
+		ops = 1000
+	}
+	if ops > 15000 {
+		ops = 15000
+	}
+	for i := 0; i < ops; i++ {
 		tokens = encode(tke, text, numTokens)
 	}
+
 	tokens = encode(tke, text, numTokens)
 	// Read the long value from the numTokens pointer
 	size := *numTokens

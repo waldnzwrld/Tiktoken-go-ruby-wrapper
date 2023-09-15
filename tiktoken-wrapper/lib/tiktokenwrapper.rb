@@ -86,7 +86,7 @@ module TikTokenWrapper
   attach_function :encode , [:pointer, :string, :pointer], :pointer
   attach_function :decode, [:pointer, :pointer, :int], :string
   attach_function :freeBpe, [:pointer], :void
-  attach_function :fullRun, [:string, :string, :pointer], :void
+  attach_function :goProfile, [:string, :string, :pointer, :int], :void
 end
 
 # TikTokenWrapper.example_run
