@@ -64,13 +64,61 @@ module Encoder
     return FFI::MemoryPointer.new(:int, size).write_array_of_int(tokens)
   end
 
-  def self.profile(encoding_type:, text:)
-    Encoder.fullRun(encoding_type, text)
-  end
 
   def self.free_encoder(encoder:)
     Encoder.freeBpe(encoder)
     encoder = FFI::Pointer::NULL
+  end
+
+  def self.go_profile(encoding_type:, text:)
+    n = FFI::MemoryPointer.new(:long)
+    Encoder.fullRun(encoding_type, text, n)
+  end
+
+  def self.benchmark()
+    # do not allow the block to be a call to go_profile
+    return unless block_given?
+    time = Benchmark.realtime do
+    50000.times do
+        yield
+      end
+    end
+    puts "Total time taken for 50000 iterations: #{time} seconds"
+    puts "Average time per iteration: #{time / 50000} seconds"
+  end
+
+  def self.ruby_profile()
+    # do not allow the block to be a call to go_profile
+    # this will cause a segfault
+    return unless block_given?
+    MemoryProfiler.start
+    yield
+    report = MemoryProfiler.stop
+    report.pretty_print
+  end
+
+  def self.test_over_time()
+    return unless block_given?
+    i = 0
+    while i < 100
+      yield
+      p "#{i + 1} successful runs"
+      i += 1
+    end
+  end
+
+  def self.example_run
+    n = FFI::MemoryPointer.new(:long)
+    c_ptr = Encoder.get_encoding_for_model(model: "gpt-4")
+
+    tokens = Encoder.encode_string(encoder: c_ptr, text: "Big cats like big boxes", size: n)
+    p "size #{n.read_long}"
+    p "tokens #{tokens.read_array_of_int(n.read_long)}"
+
+    value = Encoder.decode_tokens(encoder: c_ptr, tokens: tokens, size: n.read_long)
+    p "decoded tokens #{value}"
+
+    Encoder.free_encoder(encoder: c_ptr)
   end
 
   private
@@ -80,46 +128,23 @@ module Encoder
   attach_function :encode , [:pointer, :string, :pointer], :pointer
   attach_function :decode, [:pointer, :pointer, :int], :string
   attach_function :freeBpe, [:pointer], :void
-  attach_function :fullRun, [:string, :string], :void
+  attach_function :fullRun, [:string, :string, :pointer], :void
 end
 
-
-# uncommenting this will run 1000 the full flow in GO with 1000 iterations of encode
-# Encoder.profile(encoding_type: "cl100k_base", text: Encoder::FOUR_K_STRING)
-
-# Uncomment this line to profile the memory of the functions exposed from tiktoken.go
-MemoryProfiler.start
-
 n = FFI::MemoryPointer.new(:long)
-# i = 0
-# while i <= 100 do
 c_ptr = Encoder.get_encoding(encoding: "cl100k_base")
 
+Encoder.benchmark do
+  Encoder.encode_string(encoder: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
+end
 
-# benchmark the next function over 50000 calls
-time = Benchmark.realtime do
+Encoder.ruby_profile do
   50000.times do
     Encoder.encode_string(encoder: c_ptr, text: Encoder::FOUR_K_STRING, size: n)
   end
+  Encoder.free_encoder(encoder: c_ptr)
 end
-puts "Total time taken for 50000 iterations: #{time} seconds"
-puts "Average time per iteration: #{time / 50000} seconds"
-#   p "#{i + 1} successful runs"
-  # Encoder.free_encoder(encoder: c_ptr)
-#   i += 1
-# end
 
-# c_ptr = Encoder.get_encoding_for_model(model: "gpt-4")
+Encoder.go_profile(encoding_type: "cl100k_base", text: Encoder::FOUR_K_STRING)
 
-tokens = Encoder.encode_string(encoder: c_ptr, text: "Big cats like big boxes", size: n)
-p "size #{n.read_long}"
-p "tokens #{tokens.read_array_of_int(n.read_long)}"
-
-value = Encoder.decode_tokens(encoder: c_ptr, tokens: tokens, size: n.read_long)
-p "decoded tokens #{value}"
-
-Encoder.free_encoder(encoder: c_ptr)
-
-# If you uncommented the memory profiler above, uncomment this to print the report
-report = MemoryProfiler.stop
-report.pretty_print
+Encoder.example_run
