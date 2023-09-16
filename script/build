@@ -1,0 +1,16 @@
+# bin/bash
+
+# if the tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so file does not exist, run script/setup
+if [ ! -f "tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so" ]; then
+  echo 'Cannot build gem without C libraries. \n'
+  # Ensure go is installed
+  if ! [ -x "$(command -v go)" ]; then
+    echo 'Error: go is not installed.' >&2
+    exit 1
+  fi
+
+  script/build-clib
+fi
+
+echo "building gem"
+gem build tiktoken-encoder.gemspec

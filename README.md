@@ -12,9 +12,11 @@ A set of Ruby functions are exposed for those purposes.
 # Setup
 In a terminal execute `script/setup` this should install any needed go deps for development, and build the C lib needed for the gem to function.
 
+# Testing
+
 # Profiling the approach
 
-in a terminal execute `script/run-benchmarks`
+in a terminal execute `script/benchmark`
 
 This will perform the following benchmarks
 ## Go Profiling

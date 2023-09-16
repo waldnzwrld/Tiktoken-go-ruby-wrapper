@@ -36,4 +36,9 @@ Gem::Specification.new do |spec|
     spec.add_dependency "ffi"
     spec.add_dependency "benchmark"
     spec.add_dependency "memory_profiler"
+
+    spec.add_development_dependency "minitest", "~> 5.0"
+    spec.add_development_dependency "rubocop-github"
+    spec.add_development_dependency "mocha", "~> 2.0"
+    spec.add_development_dependency "pry", "~> 0.14.1"
 end

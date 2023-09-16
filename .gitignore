@@ -1,5 +1,7 @@
 # ignore any directory named tiktoken-encoder-*
 tiktoken-encoder-*
+# ignore the vendor dir
+vendor
 # do not ignore .gemspec files
 !*.gemspec
 # ignore .gem files

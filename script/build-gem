@@ -1,4 +1,0 @@
-# bin/bash
-
-echo "building gem"
-gem build tiktoken-encoder.gemspec

@@ -1,0 +1,10 @@
+# bin/bash
+
+if [ ! -d "vendor" ]; then
+  echo 'Running script/setup...\n'
+  script/setup
+fi
+
+# Build C libraries from go file
+  echo "Building C libraries...\n"
+  go build -buildmode=c-shared -o tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so tiktoken_wrapper.go
