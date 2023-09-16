@@ -20,41 +20,20 @@ import (
 // so that they don't get garbage collected
 // this works because the script is loaded by FFI::Library
 // and stored in memory
-// GC is run for the entire process once the ruby module
+// GC is run for the entire process once the ruby class
 // is no longer in use
 var tiktokenMap = make(map[uintptr]*tiktoken.Tiktoken)
 
 //export getEncoding
 func getEncoding(encoding *C.char) uintptr {
 	tke, err := tiktoken.GetEncoding(C.GoString(encoding))
+	// if the encoding is not found check to see if a model was passed
 	if err != nil {
-		fmt.Println(err)
-		return uintptr(0)
-	}
-
-	// since we cannot directly convert a go pointer to a C pointer
-	// we need to convert it to an unsafe pointer first
-	ptr := unsafe.Pointer(tke)
-
-	// if the pointer is nil, return a pointer to 0
-	if ptr == nil {
-		return uintptr(0)
-	}
-
-	// this stores a reference to the tiktoken struct
-	// so that it doesn't get garbage collected
-	tiktokenMap[uintptr(ptr)] = tke
-
-	// return the pointer as a uintptr which is read as an FFI::Pointer
-	return uintptr(ptr)
-}
-
-//export getEncodingForModel
-func getEncodingForModel(model *C.char) uintptr {
-	tke, err := tiktoken.EncodingForModel(C.GoString(model))
-	if err != nil {
-		fmt.Println(err)
-		return uintptr(0)
+		tke, err = tiktoken.EncodingForModel(C.GoString(encoding))
+		if err != nil {
+			fmt.Println(err)
+			return uintptr(0)
+		}
 	}
 
 	// since we cannot directly convert a go pointer to a C pointer
@@ -142,7 +121,7 @@ func decode(ptr uintptr, tokenArr *C.int, size C.long) *C.char {
 //export freeBpe
 func freeBpe(ptr uintptr) {
 	// This frees the reference to the tiktoken struct
-	// so that it can be garbage collected
+	// so that it can be safely garbage collected by go runtime
 	_, ok := tiktokenMap[ptr]
 	if !ok {
 		runtime.GC()

@@ -1,6 +1,6 @@
 # fill this out with information for the tiktoken-wrapper gem
 Gem::Specification.new do |spec|
-    spec.name          = 'tiktoken-wrapper'
+    spec.name          = 'tiktoken-encoder'
     spec.version       = '0.0.1'
     spec.authors       = ['Walden Bodtker']
     spec.email         = ['waldnzwrld@github.com', 'waldnzwrld@gmail.com']

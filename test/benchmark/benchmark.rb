@@ -1,4 +1,4 @@
-require_relative '../../tiktoken-wrapper/lib/tiktokenwrapper.rb'
+require_relative '../../tiktoken-wrapper/lib/tiktoken/encoder.rb'
 require 'ffi'
 require 'benchmark'
 require 'memory_profiler'
@@ -38,27 +38,21 @@ class BenchmarkTests
             i += 1
         end
     end
-
-    def go_profile(encoding_type:, text:, runs: 0)
-        n = FFI::MemoryPointer.new(:long)
-        TikTokenWrapper.goProfile(encoding_type, text, n, runs)
-    end
 end
 
 benchmarker = BenchmarkTests.new
-
-n = FFI::MemoryPointer.new(:long)
-c_ptr = TikTokenWrapper.get_encoding(encoding: "cl100k_base")
+encoding = "cl100k_base"
+encoder = TikToken::Encoder.new(encoding_type: encoding)
 
 benchmarker.benchmark do
-  TikTokenWrapper.encode_string(encoder: c_ptr, text: BenchmarkTests::FOUR_K_STRING, size: n)
+  encoder.encode_string(text: BenchmarkTests::FOUR_K_STRING)
 end
 
 benchmarker.ruby_profile do
   50000.times do
-    TikTokenWrapper.encode_string(encoder: c_ptr, text: BenchmarkTests::FOUR_K_STRING, size: n)
+    encoder.encode_string(text: BenchmarkTests::FOUR_K_STRING)
   end
-  TikTokenWrapper.free_encoder(encoder: c_ptr)
+  encoder.free_encoder
 end
 
-benchmarker.go_profile(encoding_type: "cl100k_base", text: BenchmarkTests::FOUR_K_STRING)
+encoder.go_profile(text: BenchmarkTests::FOUR_K_STRING)
