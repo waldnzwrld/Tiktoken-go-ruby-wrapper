@@ -1,4 +1,4 @@
-# fill this out with information for the tiktoken-wrapper gem
+# fill this out with information for the tiktoken-encoder gem
 Gem::Specification.new do |spec|
     spec.name          = 'tiktoken-encoder'
     spec.version       = '0.0.1'

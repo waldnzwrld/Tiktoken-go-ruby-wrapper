@@ -1,5 +1,5 @@
-# ignore any directory named tiktoken-wrapper-*
-tiktoken-wrapper-*
+# ignore any directory named tiktoken-encoder-*
+tiktoken-encoder-*
 # do not ignore .gemspec files
 !*.gemspec
 # ignore .gem files
