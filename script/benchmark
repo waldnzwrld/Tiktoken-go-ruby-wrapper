@@ -6,14 +6,13 @@ if [ ! -d "vendor" ]; then
   script/setup
 fi
 
-# store git head sha as a var
-current=$(git rev-parse HEAD)
-echo $current
-# if the sha of the tiktoken_wrapper.go file OR the tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so file does not match git HEAD sha, run script/build-clib
-if [ ! "$(current)"  = "$(git rev-parse tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so)" ] || [ ! "$(current)" = "$(git rev-parse HEAD:tiktoken_wrapper.go)" ]; then
-  echo 'Building C libraries...\n'
-  script/build-clib
+wrapper_sha=$(git rev-parse HEAD:tiktoken_wrapper.go)
+lib_sha=$(git rev-parse HEAD:tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so)
+
+if [ "$wrapper_sha" != "$lib_sha" ]; then
+  ./script/build-clib
 fi
+
 
 # if pprof is not installed, install it
 if ! [ -x "$(command -v pprof)" ]; then

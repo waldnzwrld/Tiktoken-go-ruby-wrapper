@@ -5,6 +5,11 @@ if [ ! -d "vendor" ]; then
   script/setup
 fi
 
-script/build-clib
+wrapper_sha=$(git rev-parse HEAD:tiktoken_wrapper.go)
+lib_sha=$(git rev-parse HEAD:tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so)
+
+if [ "$wrapper_sha" != "$lib_sha" ]; then
+  ./script/build-clib
+fi
 
 bundle exec ruby test/test/tiktoken/encoder_test.rb

@@ -1,27 +1,28 @@
 # frozen_string_literal: true
 
 require_relative '../../../tiktoken-encoder/lib/tiktoken/encoder'
+require_relative '../../helper'
 require 'minitest/autorun'
 require 'pry'
 
 class TiktokenEncoderTest < Minitest::Test
-  TEST_STRING = 'Big cats like big boxes'
   def setup
     @str_encoding = 'cl100k_base'
     @encoder = TikToken::Encoder.new(@str_encoding)
     @named_encoding = 'gpt-4'
     @named_encoder = TikToken::Encoder.new(@named_encoding)
-    @four_h_string = BenchmarkTest::FOUR_H_STRING
+    @four_h_string = Helper::FOUR_H_STRING
+    @test_string = Helper::TEST_STRING
   end
 
   def test_encode_string
-    size, tokens = @encoder.encode_string(TEST_STRING)
+    size, tokens = @encoder.encode_string(@test_string)
     assert_equal 5, size
     assert_equal [16_010, 19_987, 1093, 2466, 15_039], tokens
   end
 
   def test_encode_string_four_hundred
-    size, tokens = @encoder.encode_string(FOUR_H_STRING)
+    size, tokens = @encoder.encode_string(@four_h_string)
     assert_equal 384, size
     assert_equal [33_883, 27_439, 24_578, 2503, 28_311], tokens.first(5)
   end
@@ -29,7 +30,7 @@ class TiktokenEncoderTest < Minitest::Test
   def test_decode_tokens
     tokens = [16_010, 19_987, 1093, 2466, 15_039]
     size = tokens.size
-    assert_equal TEST_STRING, @encoder.decode_tokens(tokens, size)
+    assert_equal @test_string, @encoder.decode_tokens(tokens, size)
   end
 
   def test_convert_tokens_to_pointer
@@ -45,13 +46,13 @@ class TiktokenEncoderTest < Minitest::Test
   end
 
   def test_named_encoder
-    size, tokens = @named_encoder.encode_string(TEST_STRING)
+    size, tokens = @named_encoder.encode_string(@test_string)
     assert_equal 5, size
     assert_equal [16_010, 19_987, 1093, 2466, 15_039], tokens
   end
 
   def test_named_encoder_four_hundred
-    size, tokens = @named_encoder.encode_string(FOUR_H_STRING)
+    size, tokens = @named_encoder.encode_string(@four_h_string)
     assert_equal 384, size
     assert_equal [33_883, 27_439, 24_578, 2503, 28_311], tokens.first(5)
   end
@@ -59,7 +60,7 @@ class TiktokenEncoderTest < Minitest::Test
   def test_named_decode_tokens
     tokens = [16_010, 19_987, 1093, 2466, 15_039]
     size = tokens.size
-    assert_equal TEST_STRING, @named_encoder.decode_tokens(tokens, size)
+    assert_equal @test_string, @named_encoder.decode_tokens(tokens, size)
   end
 
   def test_creating_encoder_with_bad_name_raises
