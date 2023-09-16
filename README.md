@@ -12,11 +12,25 @@ A set of Ruby functions are exposed for those purposes.
 # Setup
 In a terminal execute `script/setup` this should install any needed go deps for development, and build the C lib needed for the gem to function.
 
+# Building for manual testing
+If you make changes to the tiktoken_wrapper.go file, you will need to execute `script/build-clib` to generate the necessary libraries used by the Ruby gem
+
+For changes to the `lib/tiktoken/encoder.rb` file you will not need to make any modifications. You can simply reference the module and call a function.
+
+
+# Building the gem
+In a terminal execute `script/build` this will build the C libraries that are needed as well as the Gemfile.
+If you are updating this gem please be certain to update the version inside of the gemspec.
+
 # Testing
+
+In a terminal execute `script/test`
+
+tests ate in the test/test/tiktoken dir
 
 # Profiling the approach
 
-in a terminal execute `script/benchmark`
+In a terminal execute `script/benchmark`
 
 This will perform the following benchmarks
 ## Go Profiling
