@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ['Walden Bodtker']
   spec.email         = ['waldnzwrld@github.com', 'waldnzwrld@gmail.com']
   spec.summary       = 'A wrapper for the tiktoken go package'
-  spec.description   = 'A wrapper for the tiktoken go package'
+  spec.description   = 'A wrapper for the tiktoken go package, which exposes the core functionality of the tiktoken package to Ruby through cgo.'
   spec.homepage      = 'https://github.com/waldnzwrld/tiktoken-go-ruby-wrapper'
   spec.license       = 'MIT'
 
