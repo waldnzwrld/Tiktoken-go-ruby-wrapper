@@ -2,9 +2,9 @@ PATH
   remote: .
   specs:
     tiktoken-encoder (0.0.1)
-      benchmark
-      ffi
-      memory_profiler
+      benchmark (~> 0.2)
+      ffi (~> 1.15)
+      memory_profiler (~> 1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -79,7 +79,7 @@ DEPENDENCIES
   minitest (~> 5.0)
   mocha (~> 2.0)
   pry (~> 0.14.1)
-  rubocop-github
+  rubocop-github (~> 0.20.0)
   tiktoken-encoder!
 
 BUNDLED WITH

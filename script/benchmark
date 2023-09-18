@@ -20,5 +20,6 @@ if ! [ -x "$(command -v pprof)" ]; then
   go install github.com/google/pprof@latest
 fi
 
+echo "Running benchmarks"
 ruby test/benchmark/benchmark_test.rb
 pprof -http=localhost:6600 mem.pprof
