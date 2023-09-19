@@ -17,6 +17,7 @@ module TikToken
       @encoding_type = encoding_type
       @token_size = FFI::MemoryPointer.new(:long)
       @encoder = self.class.get_encoding(encoding: encoding_type)
+      ObjectSpace.define_finalizer(self, proc { free_encoder })
     end
 
     def encode_string(text)
@@ -42,6 +43,8 @@ module TikToken
       # free_encoder on the pointer if the pointer is allocated
       free_encoder if @encoder != FFI::Pointer::NULL
       raise e
+    ensure
+      tokens.free if tokens.is_a?(FFI::MemoryPointer)
     end
 
     def convert_tokens_to_pointer(tokens)
