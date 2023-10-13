@@ -80,7 +80,7 @@ func encode(ptr uintptr, text *C.char, numTokens *C.long) *C.int {
 	for i, v := range token {
 		(*(*C.int)(unsafe.Pointer(uintptr(cArray) + uintptr(i)*C.sizeof_int))) = C.int(v)
 	}
-
+	defer C.free(cArray)
 	// Return a pointer to the C array which will be read as an FFI::Pointer
 	return (*C.int)(cArray)
 }
@@ -160,9 +160,6 @@ func goProfile(model *C.char, text *C.char, numTokens *C.long, runs C.int) {
 	size := *numTokens
 
 	decode(tke, tokens, size)
-	// This usually happens in Ruby when the GC runs
-	// Since tokens is a pointer referenced there
-	C.free(unsafe.Pointer(tokens))
 
 	// free the tiktoken struct
 	freeBpe(tke)
