@@ -7,7 +7,6 @@ package main
 */
 import "C"
 import (
-	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -31,7 +30,6 @@ func getEncoding(encoding *C.char) uintptr {
 	if err != nil {
 		tke, err = tiktoken.EncodingForModel(C.GoString(encoding))
 		if err != nil {
-			fmt.Println(err)
 			return uintptr(0)
 		}
 	}
@@ -152,7 +150,7 @@ func goProfile(model *C.char, text *C.char, numTokens *C.long, runs C.int) {
 		ops = 15000
 	}
 	for i := 0; i < ops; i++ {
-		tokens = encode(tke, text, numTokens)
+		encode(tke, text, numTokens)
 	}
 
 	tokens = encode(tke, text, numTokens)

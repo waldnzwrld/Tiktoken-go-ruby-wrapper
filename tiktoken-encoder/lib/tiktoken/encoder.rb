@@ -11,8 +11,6 @@ module TikToken
 
     attr_reader :token_size, :encoder
 
-    class BadEncoderValueError < StandardError; end
-
     def initialize(encoding_type)
       @encoding_type = encoding_type
       @token_size = FFI::MemoryPointer.new(:long)
@@ -24,9 +22,9 @@ module TikToken
       tokens = self.class.encode(@encoder, text, @token_size)
       [@token_size.read_long, tokens.read_array_of_int(@token_size.read_long)]
     rescue StandardError => e
-      puts "error: #{e}"
       # free_encoder on the encoder if the encoder is allocated
       free_encoder if @encoder != FFI::Pointer::NULL
+      raise e
     end
 
     def decode_tokens(tokens, size)
@@ -38,8 +36,6 @@ module TikToken
 
       self.class.decode(@encoder, tokens, size)
     rescue StandardError => e
-      puts "error: #{e}"
-
       # free_encoder on the pointer if the pointer is allocated
       free_encoder if @encoder != FFI::Pointer::NULL
       raise e
