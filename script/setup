@@ -11,6 +11,7 @@ fi
 # install go dependencies
 echo "Installing go dependencies...\n"
 go mod download
+go mod tidy
 go mod vendor
 
 bundle install

@@ -1,10 +1,31 @@
-# bin/bash
+# !/bin/bash
 
 if [ ! -d "vendor" ]; then
   echo 'Running script/setup...\n'
   script/setup
 fi
 
+# # Determine the operating system
+if [ "$(uname)" = "Linux" ]; then
+    export GOOS=linux
+elif [ "$(uname)" = "Darwin" ]; then
+    export GOOS=darwin
+elif [ "$(uname)" = "WindowsNT" ]; then
+    export GOOS=windows
+else
+    echo "Unsupported operating system"
+    exit 1
+fi
+
+# Determine the architecture
+if [ "$(uname -m)" = "x86_64" ]; then
+    export GOARCH=amd64
+elif [ "$(uname -m)" = "i386" ]; then
+    export GOARCH=386
+else
+    echo "Unsupported architecture"
+    exit 1
+fi
 # Build C libraries from go file
-  echo "Building C libraries...\n"
-  go build -buildmode=c-shared -o tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so tiktoken_wrapper.go
+echo "Building C libraries...\n"
+CGO_ENABLED=1 go build -buildmode=c-shared -o ext/libttwrapper.so ext/tiktoken_wrapper.go

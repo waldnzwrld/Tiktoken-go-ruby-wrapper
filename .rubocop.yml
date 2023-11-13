@@ -1,0 +1,20 @@
+# Looking to add a new rule? Start here:
+# https://thehub.github.com/epd/engineering/dev-practicals/ruby-rubocop-monolith-contribution-guide/
+
+inherit_gem:
+  rubocop-github:
+  - config/default.yml
+  - config/rails.yml
+
+inherit_mode:
+  merge:
+  - Include
+  - Exclude
+
+AllCops:
+    SuggestExtensions: false
+    NewCops: disable
+
+# disable STyle/HashSyntax:
+Style/HashSyntax:
+  Enabled: false

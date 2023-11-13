@@ -1,0 +1,23 @@
+# !/bin/bash
+
+gcc -o test/helpers/cgo_profile test/helpers/cgo_profile.c -ldl
+
+if [ "$(uname)" = "Darwin" ]; then
+  leaks --atExit -- test/helpers/cgo_profile
+  exit 0
+fi
+
+if ! [ -x "$(command -v heaptrack)" ]; then
+  echo 'Error: heaptrack is not installed.' >&2
+  exit 1
+fi
+
+
+location=$(heaptrack test/helpers/cgo_profile)
+# get the text in the first pair of quotes in $location
+location=$(echo $location | sed -n 's/.*"\([^"]*\)".*/\1/p')
+
+heaptrack --analyze $location
+
+rm $location
+exit 0

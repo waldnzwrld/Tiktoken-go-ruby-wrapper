@@ -1,0 +1,38 @@
+# !bin/bash
+
+echo "Running memory profiling"
+if [ ! -d "vendor" ]; then
+  echo 'Running script/setup...\n'
+  script/setup
+fi
+
+
+script/build-clib
+
+echo 'Profiling Ruby Memory\n\n'
+ruby -e 'require "./test/benchmark/profile_test.rb"; puts ProfileTest.new.run_memory_profiler' > ruby.memory.profile.txt
+
+echo "Profiling C Memory\n\n"
+if [ -x "$(command -v heaptrack)" ] || [ "$(uname)" = "Darwin" ]; then
+  script/c-profile > c.memory.profile.txt
+else
+  echo 'heaptrack not installed, building a docker container for testing'
+  # spinup and launch the docker container
+  docker build --rm -t tiktoken-image .
+  docker run --rm tiktoken-image sh -c "script/c-profile" > c.memory.profile.txt
+  docker rmi tiktoken-image
+fi
+
+# if CITEST is not set to true run the go profile
+if [ -z "$CITEST" ]; then
+  # if pprof is not installed, install it
+  if ! [ -x "$(command -v pprof)" ]; then
+    echo 'Installing pprof...\n'
+    go install github.com/google/pprof@latest
+  fi
+
+  echo 'Profiling Go Memory\n\n'
+  ruby -e 'require "./test/benchmark/profile_test.rb"; puts ProfileTest.new.go_profile'
+  echo '\nGo Memory profile can be viewed by running the following command:'
+  echo 'pprof -http=localhost:6600 mem.pprof\n'
+fi

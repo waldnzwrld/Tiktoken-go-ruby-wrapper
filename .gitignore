@@ -2,11 +2,18 @@
 tiktoken-encoder-*
 # ignore the vendor dir
 vendor
+# ignore compiled C code
+ext/*.h
+ext/*.so
 # do not ignore .gemspec files
 !*.gemspec
 # ignore .gem files
 *.gem
 # ignore pprof files from anywhere in the hierarchy
 **/*.pprof
+# ignore leak profiles
+*memory.profile.txt
+# ignore cgo_profile in the test dir, but do not ignore cgo_profile.c
+test/helpers/cgo_profile
 # ignore os x files
 .DS_Store

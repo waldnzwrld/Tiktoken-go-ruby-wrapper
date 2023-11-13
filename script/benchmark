@@ -1,4 +1,4 @@
-# bin/bash
+# !/bin/bash
 # if the vendor directory does not exist, run script/setup
 
 if [ ! -d "vendor" ]; then
@@ -6,20 +6,9 @@ if [ ! -d "vendor" ]; then
   script/setup
 fi
 
-wrapper_sha=$(git rev-parse HEAD:tiktoken_wrapper.go)
-lib_sha=$(git rev-parse HEAD:tiktoken-encoder/ext/tiktoken-encoder/libttwrapper.so)
+script/build-clib
 
-if [ "$wrapper_sha" != "$lib_sha" ]; then
-  ./script/build-clib
-fi
-
-
-# if pprof is not installed, install it
-if ! [ -x "$(command -v pprof)" ]; then
-  echo 'Installing pprof...\n'
-  go install github.com/google/pprof@latest
-fi
 
 echo "Running benchmarks"
-ruby test/benchmark/benchmark_test.rb
-pprof -http=localhost:6600 mem.pprof
+result=$(ruby -e 'require "./test/benchmark/benchmark_test.rb"; puts BenchmarkTest.new.performance_test')
+echo $result

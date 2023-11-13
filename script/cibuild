@@ -1,0 +1,9 @@
+# !/bin/bash
+
+set -e
+
+docker build -t tiktoken-image .
+# test to ensure the gem builds correctly and still works
+docker run --rm tiktoken-image bash -c "script/gem-build-test"
+docker run --rm tiktoken-image bash -c "script/ci-regression-test"
+docker rmi tiktoken-image

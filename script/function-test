@@ -1,0 +1,10 @@
+# bin/bash
+
+if [ ! -d "vendor" ]; then
+  echo 'Running script/setup...\n'
+  script/setup
+fi
+
+script/build-clib
+
+bundle exec ruby test/tiktoken_encoder_test.rb

@@ -1,0 +1,24 @@
+# bin/bash
+
+if [ ! -d "vendor" ]; then
+  echo 'Running script/setup...\n'
+  script/setup
+fi
+
+script/build
+
+echo "Preparing test file"
+# Define the input filename
+input_file="test/tiktoken_encoder_test.rb"
+
+# Use sed to substitute require_relative with require
+# to load the gem instead of the local file
+sed -i 's|require_relative "../lib/tiktoken"|require "tiktoken"|' "$input_file"
+
+echo "Installing tiktoken gem"
+
+gem install --local $(pwd)/tiktoken-encoder-*.gem
+
+echo "Running tests"
+
+bundle exec ruby test/tiktoken_encoder_test.rb

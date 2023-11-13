@@ -1,0 +1,38 @@
+{
+  "name": "Release-Controller",
+  // The dockerfile will be at te root of the project
+  "build": {"dockerfile": "Dockerfile"},
+  // Your code path from the .devcontainer directory
+  //"workspaceFolder": "../app", Not sure what changed but this seems to break building the container now
+  // "postCreateCommand": [".devcontainer/postCreate.sh"],
+	// Privileged flag is needed to run docker-in-docker, the volume
+  // is needed or docker build will fail
+  "runArgs": ["--volume=/var/lib/docker", "--privileged"],
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
+  },
+  "forwardPorts": [
+    6600
+  ],
+  "customizations": {
+    "codespaces": {
+    },
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "GitHub.codespaces",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github",
+        "bierner.github-markdown-preview",
+        "eamodio.gitlens",
+        "bierner.markdown-mermaid",
+        "doggy8088.quicktype-refresh",
+        "wayou.vscode-todo-highlight",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "premparihar.gotestexplorer"
+      ]
+    }
+  }
+}

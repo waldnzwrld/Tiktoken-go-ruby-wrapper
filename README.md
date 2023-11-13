@@ -1,9 +1,9 @@
-# Tiktoken-go-ruby-wrapper
+# Tiktoken-go-wrapper-gem
 A Ruby gem wrapper around the tiktoken-go package
 
 `tiktoken_wrapper.go` exposes the tiktoken interface in a C compatible wrapper.
 
-After making changes to `tiktoken_wrapper.go` the command: `go build -buildmode=c-shared -o libttwrapper.so tiktoken_wrapper.go` generates a C library that can be imported in Ruby through FFI::Library.
+After making changes to `tiktoken_wrapper.go` the command: `go build -buildmode=c-shared -o libttwrapper.so tiktoken_wrapper.go` generates a C library that can be imported in Ruby through Fiddle::Library.
 
 The go functions are attached as private to allow for error handling on the Ruby side.
 
@@ -24,22 +24,46 @@ If you are updating this gem please be certain to update the version inside of t
 
 # Testing
 
-In a terminal execute `script/test`
+In a terminal execute `script/function-test`
 
-tests ate in the test/test/tiktoken dir
+tests are in the test/test/tiktoken dir
 
 # Profiling the approach
 
-In a terminal execute `script/benchmark`
+In a terminal execute `script/memory-profile`
 
 This will perform the following benchmarks
 ## Go Profiling
-encoder.rb#L71 contains a call to a `goProfile` function in the cgo lib tiktoken_wrapper.go#L120.
+profile_test.rb#L49 contains a call to a `goProfile` function in the cgo lib tiktoken_wrapper.go#L120.
 This runs all of the exposed tiktoken functions including a run of `encode` over 1000 executions.
+This is called on benchmark_test.rb#L64
 The output is written to a pprof file, which can be opened using `pprof -http=localhost:6600 mem.pprof`
 
+## C profiling
+test/cgo_profile.c is compiled and executed it runs the same `goProfile` function mentioned above using either `leaks` on MacOs
+or `heaptrack` either locally or in a docker container.
+
 ## Ruby Profiling
-benchmark.rb#L51 wraps an `encode` block run 50000 times in  MemoryProfiler calls that describe object allocation
+profile_test.rb#L37 wraps an `encode` block run 50000 times in  MemoryProfiler calls that describe object allocation
 and overall memory usage.
 
-benchmark.rb#L47 includes a 50000 execution block of calls to Encode with timings.
+## Long testing
+profile_test.rb includes a `test_over_time` method that takes a block and repeats the block 100 times.
+It could be used to test looooong chains of encoding or decoding over time to see if there is a memory leak if
+need be. I have used it before to verify my approach but did not include it in scripting due to the efficacy of the above profiling.
+
+
+
+# Timing the approach
+
+In a terminal execute `script/benchmark`
+
+benchmark_test.rb#L25 includes a 50000 execution block of calls to Encode with timings.
+
+
+# CI
+
+CI will build the gem and run tests against the gem in a docker container.
+It also Lints the Go and Ruby code
+
+There is also a set of regression tests to make sure that latency is not increased and that memory leaks are vetted.
