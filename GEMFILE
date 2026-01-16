@@ -4,3 +4,8 @@ source "https://rubygems.org"
 
 # Specify dependencies in tiktoken-encoder.gemspec
 gemspec({path: "./"})
+
+group :development, :test do
+  gem 'get_process_mem'
+  gem 'memory_profiler'
+end

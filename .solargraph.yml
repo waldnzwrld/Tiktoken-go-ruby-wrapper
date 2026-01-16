@@ -1,0 +1,19 @@
+include:
+  - "**/*.rb"
+exclude:
+  - spec/**/*
+  - test/**/*
+  - vendor/**/*
+  - ".bundle/**/*"
+reporters:
+  - rubocop
+  - typecheck
+require:
+  - get_process_mem
+  - memory_profiler
+domains: []
+max_files: 5000
+useBundler: true
+bundlerPath: bundle
+checkGemVersion: true
+includeGems: true
