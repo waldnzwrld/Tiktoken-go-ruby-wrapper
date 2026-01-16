@@ -53,21 +53,12 @@ func getEncoding(encoding *C.char) uintptr {
 
 //export encode
 func encode(ptr uintptr, text *C.char, numTokens *C.long) *C.int {
-	// numTokens is an empty FFI::MemoryPointer
-	// which will be used to store the number of tokens
-
-	// get the referenced pointer
-	// from the inmemory map
-	// to the *tiktoken.Tiktoken encoder struct
 	pointer := *tiktokenMap[ptr]
-	// get the referenced struct
 	encoder := &pointer
-	// encode
 	token := encoder.Encode(C.GoString(text), nil, nil)
 
 	size := len(token)
 	if numTokens != nil {
-		// set the FFI::MemoryPointer value to size
 		*numTokens = C.long(size)
 	}
 
@@ -78,42 +69,27 @@ func encode(ptr uintptr, text *C.char, numTokens *C.long) *C.int {
 	for i, v := range token {
 		(*(*C.int)(unsafe.Pointer(uintptr(cArray) + uintptr(i)*C.sizeof_int))) = C.int(v)
 	}
-	defer C.free(cArray)
+
 	// Return a pointer to the C array which will be read as an FFI::Pointer
+	// Note: The memory will be freed by the Ruby side using FFI::MemoryPointer
 	return (*C.int)(cArray)
 }
 
 //export decode
-func decode(ptr uintptr, tokenArr *C.int, size C.long) *C.char {
-	// Here an FFI::Pointer tokenArr is passed in as a uintptr
-	// and then converted to a C array of ints
-	// This is probably the most difficult part of the code to read
-	// let's break it down
-	// in order to perform pointer arithmetic on the C array referenced by a *C.int
-	// we first need to convert it to an unsafe.Pointer then a uintptr
-	// then in order to get the offest bytes needed to access the correct element
-	// we multiply the index by the size of an int
-	// Finally we convert the resulting uintptr back to a *C.int through an unsafe.Pointer
-	// and dereference it to get the value
-	// This is done for each element in the array
-	// Long story short although this seems complex it is a necessary conversion.
-	// Since the unsafe.Pointers are used immediately GC is not an issue
-
+func decode(ptr uintptr, tokenArr *C.int, size C.long, outStr **C.char) C.int {
 	tokens := make([]int, size)
 	for i := 0; i < int(size); i++ {
 		tokens[i] = int(*(*C.int)(unsafe.Pointer(uintptr(unsafe.Pointer(tokenArr)) + uintptr(i)*C.sizeof_int)))
 	}
 
-	// get the referenced pointer
-	// from the inmemory map
-	// to the *tiktoken.Tiktoken encoder struct
 	pointer := *tiktokenMap[ptr]
-	// get the referenced struct
 	encoder := &pointer
 
 	text := encoder.Decode(tokens)
-	// return a C string
-	return C.CString(text)
+	// Create a C string and return it via output parameter
+	// The caller is responsible for freeing this memory via freeMemory()
+	*outStr = C.CString(text)
+	return C.int(len(text))
 }
 
 //export freeBpe
@@ -157,7 +133,9 @@ func goProfile(model *C.char, text *C.char, numTokens *C.long, runs C.int) {
 	// Read the long value from the numTokens pointer
 	size := *numTokens
 
-	decode(tke, tokens, size)
+	var decodedStr *C.char
+	decode(tke, tokens, size, &decodedStr)
+	C.free(unsafe.Pointer(decodedStr))
 
 	// free the tiktoken struct
 	freeBpe(tke)
@@ -166,6 +144,32 @@ func goProfile(model *C.char, text *C.char, numTokens *C.long, runs C.int) {
 	// this can be read with pprof
 	// pprof -web localhost:6000 mem.pprof
 	f, _ := os.Create("mem.pprof")
+	pprof.WriteHeapProfile(f)
+	f.Close()
+}
+
+//export freeMemory
+func freeMemory(ptr unsafe.Pointer) {
+	// This function is called from Ruby to free C-allocated memory
+	C.free(ptr)
+}
+
+//export startMemoryProfile
+func startMemoryProfile() {
+	f, err := os.Create("go_mem.prof")
+	if err != nil {
+		return
+	}
+	pprof.WriteHeapProfile(f)
+	f.Close()
+}
+
+//export stopMemoryProfile
+func stopMemoryProfile() {
+	f, err := os.Create("go_mem_final.prof")
+	if err != nil {
+		return
+	}
 	pprof.WriteHeapProfile(f)
 	f.Close()
 }

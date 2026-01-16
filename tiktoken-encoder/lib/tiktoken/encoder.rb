@@ -15,12 +15,24 @@ module TikToken
       @encoding_type = encoding_type
       @token_size = FFI::MemoryPointer.new(:long)
       @encoder = self.class.get_encoding(encoding: encoding_type)
-      ObjectSpace.define_finalizer(self, proc { free_encoder })
+      # Use a release proc that captures only the pointer value, not self
+      # This avoids the closure bug where self would never be GC'd
+      ObjectSpace.define_finalizer(self, self.class.release_encoder_proc(@encoder))
+    end
+
+    # Creates a release proc that only captures the pointer value
+    # This is necessary to avoid preventing GC of the Encoder instance
+    def self.release_encoder_proc(encoder_ptr)
+      proc { freeBpe(encoder_ptr) }
     end
 
     def encode_string(text)
       tokens = self.class.encode(@encoder, text, @token_size)
-      [@token_size.read_long, tokens.read_array_of_int(@token_size.read_long)]
+      size = @token_size.read_long
+      result = tokens.read_array_of_int(size)
+      # Free the C-allocated memory
+      self.class.free_memory(tokens)
+      [size, result]
     rescue StandardError => e
       # free_encoder on the encoder if the encoder is allocated
       free_encoder if @encoder != FFI::Pointer::NULL
@@ -32,15 +44,25 @@ module TikToken
       # returns a string
       raise StandardError, 'size must be an integer' unless size.is_a?(Integer)
 
-      tokens = convert_tokens_to_pointer(tokens) if tokens.is_a?(Array)
+      token_ptr = tokens.is_a?(Array) ? convert_tokens_to_pointer(tokens) : tokens
+      # Create an output pointer for the decoded string
+      out_str_ptr = FFI::MemoryPointer.new(:pointer)
+      self.class.decode(@encoder, token_ptr, size, out_str_ptr)
 
-      self.class.decode(@encoder, tokens, size)
+      # Read the C string from the output pointer
+      c_str_ptr = out_str_ptr.read_pointer
+      result = c_str_ptr.read_string
+
+      # Free the C-allocated string memory
+      self.class.free_memory(c_str_ptr)
+      # Free the token pointer if we created it
+      token_ptr.free if tokens.is_a?(Array)
+
+      result
     rescue StandardError => e
       # free_encoder on the pointer if the pointer is allocated
       free_encoder if @encoder != FFI::Pointer::NULL
       raise e
-    ensure
-      tokens.free if tokens.is_a?(FFI::MemoryPointer)
     end
 
     def convert_tokens_to_pointer(tokens)
@@ -65,7 +87,16 @@ module TikToken
     attach_function :goProfile, %i[string string pointer int], :void
     attach_function :getEncoding, [:string], :pointer
     attach_function :encode, %i[pointer string pointer], :pointer
-    attach_function :decode, %i[pointer pointer int], :string
+    attach_function :decode, %i[pointer pointer long pointer], :int
     attach_function :freeBpe, [:pointer], :void
+    attach_function :free_memory, :freeMemory, [:pointer], :void
+    attach_function :startMemoryProfile, [], :void
+    attach_function :stopMemoryProfile, [], :void
+
+    def self.profile_memory
+      startMemoryProfile
+      yield
+      stopMemoryProfile
+    end
   end
 end
